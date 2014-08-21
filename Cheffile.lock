@@ -1,0 +1,15 @@
+PATH
+  remote: vendor/cookbooks/plist
+  specs:
+    plist (0.9.0)
+
+PATH
+  remote: vendor/cookbooks/plist-test
+  specs:
+    plist-test (0.0.0)
+      plist (>= 0.0.0)
+
+DEPENDENCIES
+  plist (>= 0)
+  plist-test (>= 0)
+

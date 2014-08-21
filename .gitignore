@@ -1,0 +1,8 @@
+/.ruby-version
+/.bundle/
+/.idea/
+/.librarian/tmp/chef/
+/.yardoc/
+/cookbooks/
+/doc/
+/vendor/bundle/
