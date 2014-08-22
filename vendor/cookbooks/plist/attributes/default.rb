@@ -14,11 +14,4 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-source "https://rubygems.org"
-
-gem "chef"
-gem "chefspec"
-gem "librarian-chef"
-gem "nokogiri"
-gem "rake"
-gem "rspec"
+default["plist"]["owner"] = nil
