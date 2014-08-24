@@ -15,11 +15,17 @@
 # the License.
 
 require "chef/shell_out"
+require "diff/lcs"
+require "diff/lcs/hunk"
 require "etc"
 require "pathname"
 
 include Chef::Mixin::ShellOut
 include Plist
+
+def whyrun_supported?
+  true
+end
 
 action :update do
   require "nokogiri" \
@@ -134,15 +140,19 @@ action :update do
     format = format.to_s
   end
 
-  case format
-    when "binary"
-      # Use `plutil` to write out the plist in the binary format.
-      shell_out!("plutil", "-convert", "binary1", "-o", file.to_s, "--", "-", input: xml)
-    when "xml"
-      file.open("wb") { |f| f.write(xml) }
-    else
-      raise "Invalid plist output format #{format.dump}"
-  end
+  descriptions = ["#{action.to_s} plist #{file.to_s.dump}"]
+  descriptions.push(udiff(file, original_xml, file, xml).split("\n", -1))
 
-  new_resource.updated_by_last_action(true)
+  # Use `converge_by` to obtain some nice why-run output.
+  converge_by(descriptions) do
+    case format
+      when "binary"
+        # Use `plutil` to write out the plist in the binary format.
+        shell_out!("plutil", "-convert", "binary1", "-o", file.to_s, "--", "-", input: xml)
+      when "xml"
+        file.open("wb") { |f| f.write(xml) }
+      else
+        raise "Invalid plist output format #{format.dump}"
+    end
+  end
 end

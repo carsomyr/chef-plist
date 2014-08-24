@@ -174,6 +174,53 @@ module Plist
 
       node
     end
+
+    def udiff(src_file, src_content, dst_file, dst_content)
+      time_format = "%Y-%m-%d %H:%M:%S.%N %z"
+      time_str = Time.now.localtime.strftime(time_format)
+
+      acc = ""
+
+      if src_file
+        acc.concat("--- #{src_file.to_s}\t#{src_file.stat.mtime.localtime.strftime(time_format)}\n")
+      else
+        acc.concat("--- /dev/null\t#{time_str}\n")
+      end
+
+      if dst_file
+        acc.concat("--- #{dst_file.to_s}\t#{time_str}\n")
+      else
+        acc.concat("--- /dev/null\t#{time_str}\n")
+      end
+
+      curr_hunk = nil
+      prev_hunk = nil
+      prev_difference = 0
+
+      src_lines = src_content.split("\n", -1)
+      dst_lines = dst_content.split("\n", -1)
+
+      # Build the diff output from merged hunks. Inspired by
+      # `https://github.com/opscode/chef/blob/master/lib/chef/util/diff.rb`.
+      Diff::LCS.diff(src_lines, dst_lines).each do |fragment|
+        begin
+          curr_hunk = Diff::LCS::Hunk.new(src_lines, dst_lines, fragment, 3, prev_difference)
+          prev_difference = curr_hunk.file_length_difference
+
+          next \
+        if !prev_hunk || curr_hunk.merge(prev_hunk)
+
+          acc.concat("#{prev_hunk.diff(:unified)}\n")
+        ensure
+          prev_hunk = curr_hunk
+        end
+      end
+
+      acc.concat("#{prev_hunk.diff(:unified)}\n") \
+        if prev_hunk
+
+      acc
+    end
   end
 
   def self.included(clazz)
