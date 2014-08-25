@@ -27,7 +27,7 @@ content = <<EOS
         <dict>
             <key>key0</key>
             <false/>
-            <key>key1</key>
+            <key>key2</key>
             <false/>
         </dict>
     </dict>
@@ -71,19 +71,21 @@ updated_content = <<EOS
 					</array>
 				</dict>
 			</dict>
+			<key>key2</key>
+			<false/>
 		</dict>
 	</dict>
 	<key>outer1</key>
 	<dict>
 		<key>inner1</key>
 		<dict>
-			<key>key1</key>
-			<false/>
 			<key>key0</key>
 			<data>
 			YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xt
 			bm9wcXJzdHV2d3h5emFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6
 			</data>
+			<key>key1</key>
+			<false/>
 			<key>key2</key>
 			<data>
 			YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xt

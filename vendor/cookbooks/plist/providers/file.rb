@@ -88,16 +88,39 @@ action :update do
             depth += 1
           end
 
-          shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
-          shim_mid = "\n" + "\t" * depth
-          shim_end = "\n" + "\t" * (depth - 1)
+          # Find a suitable insertion location so that keys remain lexicographically ordered.
+          insertion_node = node.css("> key").to_a.bsearch { |node| node.text > last_key }
 
-          # Append newly created children to the end.
-          node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
-          node.add_child(to_node(Plist::Key.new(last_key), doc, node, depth))
-          node.add_child(to_node(Plist::Text.new(shim_mid), doc, node, depth))
-          node.add_child(to_node(value, doc, node, depth))
-          node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
+          if insertion_node
+            shim_start = "\n" + "\t" * depth
+            shim_end = shim_start
+
+            children = node.children.to_a
+            index = children.index(insertion_node)
+
+            # Prepend newly created children to the node representing the insertion location. Note that we are
+            # rebuilding the `NodeSet` of children because Nokogiri incorrectly reparents existing `Text` nodes with
+            # `Node#before`.
+            children = children[0, index] \
+              + [to_node(Plist::Key.new(last_key), doc, node, depth),
+                 to_node(Plist::Text.new(shim_start), doc, node, depth),
+                 to_node(value, doc, node, depth),
+                 to_node(Plist::Text.new(shim_end), doc, node, depth)] \
+              + children[index, children.size]
+
+            node.children = Nokogiri::XML::NodeSet.new(doc, children)
+          else
+            shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
+            shim_mid = "\n" + "\t" * depth
+            shim_end = "\n" + "\t" * (depth - 1)
+
+            # Append newly created children to the end.
+            node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
+            node.add_child(to_node(Plist::Key.new(last_key), doc, node, depth))
+            node.add_child(to_node(Plist::Text.new(shim_mid), doc, node, depth))
+            node.add_child(to_node(value, doc, node, depth))
+            node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
+          end
         end
       end
     else

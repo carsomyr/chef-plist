@@ -109,7 +109,9 @@ module Plist
           node = Nokogiri::XML::Node.new("dict", document)
           node.parent = parent
 
-          data.each_pair do |key, value|
+          data.each_pair.sort do |lhs, rhs|
+            lhs[0].to_s <=> rhs[0].to_s
+          end.map do |key, value|
             node.add_child(to_node(Text(shim_start), document, node, depth + 1))
             node.add_child(to_node(Key(key), document, node, depth + 1))
             node.add_child(to_node(Text(shim_start), document, node, depth + 1))
