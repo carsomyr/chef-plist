@@ -177,6 +177,55 @@ module Plist
       node
     end
 
+    def to_ruby(node, depth)
+      case node.name
+        when "dict"
+          elements = node.elements
+          Hash[(0...elements.size).step(2).map { |i| [elements[i].text, to_ruby(elements[i + 1], depth + 1)] }]
+        when "array"
+          node.elements.map { |element| to_ruby(element, depth + 1) }
+        when "string"
+          node.text
+        when "true"
+          true
+        when "false"
+          false
+        when "integer"
+          node.text.to_i
+        when "real"
+          node.text.to_f
+        when "data"
+          # Strip out pretty-printed whitespace.
+          Data.new(node.text.gsub("\n" + "\t" * depth, ""), false)
+        else
+          raise "Invalid plist data type #{node.name.dump}"
+      end
+    end
+
+    def deep_equals?(lhs, rhs)
+      return false \
+        if lhs.class != rhs.class
+
+      case lhs
+        when Array
+          return false \
+            if lhs.size != rhs.size || (0...lhs.size).find { |i| !deep_equals?(lhs[i], rhs[i]) }
+        when Hash
+          lhs_keys = lhs.keys
+          rhs_keys = rhs.keys
+
+          return false \
+            if lhs_keys.sort != rhs_keys.sort || lhs_keys.find { |key| !deep_equals?(lhs[key], rhs[key]) }
+        when String, TrueClass, FalseClass, Fixnum, Float, Plist::Data
+          return false \
+            if lhs != rhs
+        else
+          raise "There is no corresponding plist data type for the given Ruby object"
+      end
+
+      true
+    end
+
     def udiff(src_file, src_content, dst_file, dst_content)
       time_format = "%Y-%m-%d %H:%M:%S.%N %z"
       time_str = Time.now.localtime.strftime(time_format)

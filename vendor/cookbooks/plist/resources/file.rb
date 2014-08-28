@@ -23,7 +23,7 @@ attribute :domain, kind_of: String, name_attribute: true
 attribute :file, kind_of: Pathname
 attribute :format, kind_of: [NilClass, Symbol, String], equal_to: [nil, :binary, "binary", :xml, "xml"]
 
-attr_reader :keys_values
+attr_reader :op_keys_values
 attr_reader :css_queries
 attr_reader :css_query_callback
 
@@ -31,7 +31,14 @@ def set(*keys, value)
   raise "Setting the plist root `dict` requires an instance of `Hash`" \
     if keys.size == 0 && !value.is_a?(Hash)
 
-  @keys_values.push([keys, value])
+  @op_keys_values.push([:set, keys, value])
+end
+
+def push(*keys, value)
+  raise "Please provide at least one `dict` key" \
+    if keys.size == 0
+
+  @op_keys_values.push([:push, keys, value])
 end
 
 def css_select(*css_queries, &css_query_callback)
@@ -46,5 +53,5 @@ def initialize(domain, run_context)
   super
 
   @css_queries = []
-  @keys_values = []
+  @op_keys_values = []
 end

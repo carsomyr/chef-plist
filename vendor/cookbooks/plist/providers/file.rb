@@ -27,6 +27,105 @@ def whyrun_supported?
   true
 end
 
+def set_operation(doc, keys, value)
+  root = doc.root
+
+  if keys.size > 0
+    last_key = keys.pop
+    css_query = "> dict" + keys.map { |key| " > key:content_equals(#{escape_css(key)}) + dict" }.join("")
+
+    root.css(css_query, self).each do |node|
+      old_nodes = node.css("> key:content_equals(#{escape_css(last_key)})", self)
+
+      if old_nodes.size > 0
+        # A value already exists for the key; replace it.
+        new_node = to_node(value, doc, node)
+        old_nodes.each { |old_node| old_node.next_element.replace(new_node) }
+      else
+        parent = node
+        depth = 0
+
+        while parent != root
+          parent = parent.parent
+          depth += 1
+        end
+
+        # Find a suitable insertion location so that keys remain lexicographically ordered.
+        insertion_node = node.css("> key").to_a.bsearch { |node| node.text > last_key }
+
+        if insertion_node
+          shim_start = "\n" + "\t" * depth
+          shim_end = shim_start
+
+          children = node.children.to_a
+          index = children.index(insertion_node)
+
+          # Prepend newly created children to the node representing the insertion location. Note that we are rebuilding
+          # the `NodeSet` of children because Nokogiri incorrectly reparents existing `Text` nodes with `Node#before`.
+          children = children[0, index] \
+            + [to_node(Plist::Key.new(last_key), doc, node, depth),
+               to_node(Plist::Text.new(shim_start), doc, node, depth),
+               to_node(value, doc, node, depth),
+               to_node(Plist::Text.new(shim_end), doc, node, depth)] \
+            + children[index, children.size]
+
+          node.children = Nokogiri::XML::NodeSet.new(doc, children)
+        else
+          shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
+          shim_mid = "\n" + "\t" * depth
+          shim_end = "\n" + "\t" * (depth - 1)
+
+          # Append newly created children to the end.
+          node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
+          node.add_child(to_node(Plist::Key.new(last_key), doc, node, depth))
+          node.add_child(to_node(Plist::Text.new(shim_mid), doc, node, depth))
+          node.add_child(to_node(value, doc, node, depth))
+          node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
+        end
+      end
+    end
+  else
+    # The user intends to replace the root `dict`.
+    root.css("> dict").each do |node|
+      node.replace(to_node(value, doc, root, 0))
+    end
+  end
+end
+
+def push_operation(doc, keys, value)
+  root = doc.root
+
+  last_key = keys.pop
+  css_query = "> dict" \
+    + keys.map { |key| " > key:content_equals(#{escape_css(key)}) + dict" }.join("") \
+    + " > key:content_equals(#{escape_css(last_key)}) + array"
+
+  root.css(css_query, self).each do |node|
+    parent = node
+    depth = 0
+
+    while parent != root
+      parent = parent.parent
+      depth += 1
+    end
+
+    value_node = to_node(value, doc, node, depth).remove
+    value = to_ruby(value_node, depth)
+
+    # Do nothing if the array already contains the value.
+    next \
+      if to_ruby(node, depth - 1).find { |xml_value| deep_equals?(xml_value, value) }
+
+    shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
+    shim_end = "\n" + "\t" * (depth - 1)
+
+    # Append newly created children to the end.
+    node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
+    node.add_child(value_node)
+    node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
+  end
+end
+
 action :update do
   require "nokogiri" \
     if !defined?(Nokogiri)
@@ -64,70 +163,16 @@ action :update do
   original_doc = Nokogiri::XML::Document.parse(xml)
   doc = original_doc.dup
 
-  new_resource.keys_values.each do |keys, value|
+  new_resource.op_keys_values.each do |operation, keys, value|
     keys = keys.map { |key| key.to_s }
-    root = doc.root
 
-    if keys.size > 0
-      last_key = keys.pop
-      css_query = "> dict" + keys.map { |key| " > key:content_equals(#{escape_css(key)}) + dict" }.join("")
-
-      root.css(css_query, self).each do |node|
-        old_nodes = node.css("> key:content_equals(#{escape_css(last_key)})", self)
-
-        if old_nodes.size > 0
-          # A value already exists for the key; replace it.
-          new_node = to_node(value, doc, node)
-          old_nodes.each { |old_node| old_node.next_element.replace(new_node) }
-        else
-          parent = node
-          depth = 0
-
-          while parent != root
-            parent = parent.parent
-            depth += 1
-          end
-
-          # Find a suitable insertion location so that keys remain lexicographically ordered.
-          insertion_node = node.css("> key").to_a.bsearch { |node| node.text > last_key }
-
-          if insertion_node
-            shim_start = "\n" + "\t" * depth
-            shim_end = shim_start
-
-            children = node.children.to_a
-            index = children.index(insertion_node)
-
-            # Prepend newly created children to the node representing the insertion location. Note that we are
-            # rebuilding the `NodeSet` of children because Nokogiri incorrectly reparents existing `Text` nodes with
-            # `Node#before`.
-            children = children[0, index] \
-              + [to_node(Plist::Key.new(last_key), doc, node, depth),
-                 to_node(Plist::Text.new(shim_start), doc, node, depth),
-                 to_node(value, doc, node, depth),
-                 to_node(Plist::Text.new(shim_end), doc, node, depth)] \
-              + children[index, children.size]
-
-            node.children = Nokogiri::XML::NodeSet.new(doc, children)
-          else
-            shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
-            shim_mid = "\n" + "\t" * depth
-            shim_end = "\n" + "\t" * (depth - 1)
-
-            # Append newly created children to the end.
-            node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
-            node.add_child(to_node(Plist::Key.new(last_key), doc, node, depth))
-            node.add_child(to_node(Plist::Text.new(shim_mid), doc, node, depth))
-            node.add_child(to_node(value, doc, node, depth))
-            node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
-          end
-        end
-      end
-    else
-      # The user intends to replace the root `dict`.
-      root.css("> dict").each do |node|
-        node.replace(to_node(value, doc, root, 0))
-      end
+    case operation
+      when :set
+        set_operation(doc, keys, value)
+      when :push
+        push_operation(doc, keys, value)
+      else
+        raise "Invalid operation #{operation.to_s.dump}"
     end
   end
 
