@@ -17,6 +17,7 @@
 require "base64"
 require "etc"
 require "pathname"
+require "time"
 
 module Plist
   class Key
@@ -163,6 +164,10 @@ module Plist
 
           node.add_child(to_node(Text(([""] + lines + [""]).join(shim_end)), document, node, depth + 1)) \
             if data.content.size > 0
+        when Time
+          node = Nokogiri::XML::Node.new("date", document)
+          node.parent = parent
+          node.content = data.iso8601
         when Key
           node = Nokogiri::XML::Node.new("key", document)
           node.parent = parent
@@ -197,6 +202,8 @@ module Plist
         when "data"
           # Strip out pretty-printed whitespace.
           Data.new(node.text.gsub("\n" + "\t" * depth, ""), false)
+        when "date"
+          Time.iso8601(node.text)
         else
           raise "Invalid plist data type #{node.name.dump}"
       end
@@ -216,7 +223,7 @@ module Plist
 
           return false \
             if lhs_keys.sort != rhs_keys.sort || lhs_keys.find { |key| !deep_equals?(lhs[key], rhs[key]) }
-        when String, TrueClass, FalseClass, Fixnum, Float, Plist::Data
+        when String, TrueClass, FalseClass, Fixnum, Float, Plist::Data, Time
           return false \
             if lhs != rhs
         else

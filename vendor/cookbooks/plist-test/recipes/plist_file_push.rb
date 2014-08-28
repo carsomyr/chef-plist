@@ -14,6 +14,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+require "time"
+
 test_file = Pathname.new(Dir.tmpdir) + "#{recipe_name}_spec.plist"
 
 plist_file "#{recipe_name}_spec" do
@@ -32,5 +34,7 @@ plist_file "#{recipe_name}_spec" do
        Plist::Data.new("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz")
   push "outer5", "inner5",
        Plist::Data.new("zyxwvutsrqponmlkjihgfedcbazyxwvutsrqponmlkjihgfedcbazyxwvutsrqponmlkjihgfedcba")
+  push "outer6", "inner6", Time.iso8601("2016-01-01T00:00:00Z")
+  push "outer6", "inner6", Time.iso8601("2015-01-01T00:00:00Z")
   action :nothing
 end.action(:update)

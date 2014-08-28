@@ -58,6 +58,8 @@ updated_content = <<EOS
 			<dict>
 				<key>a</key>
 				<dict>
+					<key>a</key>
+					<date>2014-01-01T00:00:00Z</date>
 					<key>b</key>
 					<array>
 						<true/>

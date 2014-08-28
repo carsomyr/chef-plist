@@ -14,11 +14,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+require "time"
+
 test_file = Pathname.new(Dir.tmpdir) + "#{recipe_name}_spec.plist"
 
 plist_file "#{recipe_name}_spec" do
   file test_file
-  set "outer0", "inner0", "key1", {a: {c: [false, 0, 1.23], b: [true, "a"]}}
+  set "outer0", "inner0", "key1", {a: {c: [false, 0, 1.23], b: [true, "a"], a: Time.iso8601("2014-01-01T00:00:00Z")}}
   set "outer0", "inner0", "key0", true
   set "outer1", "inner1", "key0",
       Plist::Data.new("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz")

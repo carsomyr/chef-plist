@@ -88,6 +88,14 @@ content = <<EOS
             </data>
         </array>
     </dict>
+    <key>outer6</key>
+    <dict>
+        <key>inner6</key>
+        <array>
+            <date>2014-01-01T00:00:00Z</date>
+            <date>2015-01-01T00:00:00Z</date>
+        </array>
+    </dict>
 </dict>
 </plist>
 EOS
@@ -177,6 +185,15 @@ updated_content = <<EOS
 			YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xt
 			bm9wcXJzdHV2d3h5emFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6
 			</data>
+		</array>
+	</dict>
+	<key>outer6</key>
+	<dict>
+		<key>inner6</key>
+		<array>
+			<date>2014-01-01T00:00:00Z</date>
+			<date>2015-01-01T00:00:00Z</date>
+			<date>2016-01-01T00:00:00Z</date>
 		</array>
 	</dict>
 </dict>
