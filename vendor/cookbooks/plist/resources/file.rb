@@ -16,12 +16,15 @@
 
 require "pathname"
 
-actions [:update]
+actions [:update, :create]
 default_action :update
 
 attribute :domain, kind_of: String, name_attribute: true
 attribute :file, kind_of: Pathname
 attribute :format, kind_of: [NilClass, Symbol, String], equal_to: [nil, :binary, "binary", :xml, "xml"]
+attribute :owner, kind_of: String
+attribute :group, kind_of: String
+attribute :mode, kind_of: [String, Fixnum]
 
 attr_reader :op_keys_values
 attr_reader :css_queries
@@ -47,6 +50,13 @@ def css_select(*css_queries, &css_query_callback)
 
   @css_queries = css_queries
   @css_query_callback = css_query_callback
+end
+
+def content(value)
+  raise "Setting the plist root `dict` requires an instance of `Hash`" \
+    if !value.is_a?(Hash)
+
+  @op_keys_values = [[:content, [], value]]
 end
 
 def initialize(domain, run_context)

@@ -126,13 +126,13 @@ def push_operation(doc, keys, value)
   end
 end
 
-action :update do
-  require "nokogiri" \
-    if !defined?(Nokogiri)
+def file
+  @file \
+    if @file
 
-  file = new_resource.file
+  @file = new_resource.file
 
-  if !file
+  if !@file
     domain = new_resource.domain
 
     # Handle special domains.
@@ -148,8 +148,71 @@ action :update do
       prefix = Pathname.new("/")
     end
 
-    file = prefix + "Library/Preferences/#{domain}.plist"
+    @file = prefix + "Library/Preferences/#{domain}.plist"
   end
+
+  @file
+end
+
+def save(original_file, original_xml, file, xml)
+  format = new_resource.format
+  owner = new_resource.owner
+  group = new_resource.group
+  mode = new_resource.mode
+
+  return \
+    if original_xml == xml
+
+  if !format
+    if file.file?
+      # Use the original input format if the output format wasn't specified.
+
+      mime_type = shell_out!("file", "-b", "--mime-type", "--", file.to_s).stdout.chomp("\n")
+
+      case mime_type
+        when "application/octet-stream"
+          format = "binary"
+        when "application/xml"
+          format = "xml"
+        else
+          raise "Invalid MIME type #{mime_type.dump}"
+      end
+    else
+      format = "xml"
+    end
+  else
+    format = format.to_s
+  end
+
+  descriptions = ["#{action.to_s} plist #{file.to_s.dump}"]
+  descriptions.push(udiff(original_file, original_xml, file, xml).split("\n", -1))
+
+  # Use `converge_by` to obtain some nice why-run output.
+  converge_by(descriptions) do
+    case format
+      when "binary"
+        # Use `plutil` to write out the plist in the binary format.
+        shell_out!("plutil", "-convert", "binary1", "-o", file.to_s, "--", "-", input: xml)
+      when "xml"
+        file.open("wb") { |f| f.write(xml) }
+      else
+        raise "Invalid plist output format #{format.dump}"
+    end
+
+    FileUtils.chown(owner, nil, file) \
+      if owner
+
+    FileUtils.chown(nil, group, file) \
+      if group
+
+    FileUtils.chmod(mode, file) \
+      if mode
+  end
+end
+
+action :update do
+  require "nokogiri" \
+    if !defined?(Nokogiri)
 
   if !file.file?
     Chef::Log.info("no action taken for #{new_resource} because plist file #{file.to_s.dump} doesn't exist")
@@ -179,48 +242,38 @@ action :update do
   # Run the user queries.
   doc.root.css(*new_resource.css_queries, self).each(&new_resource.css_query_callback)
 
-  original_xml = original_doc.to_xml(indent: 0)
-  xml = doc.to_xml(indent: 0)
+  save(file, original_doc.to_xml(indent: 0), file, doc.to_xml(indent: 0))
+end
 
-  next \
-    if original_xml == xml
+action :create do
+  require "nokogiri" \
+    if !defined?(Nokogiri)
 
-  format = new_resource.format
-
-  if !format
-    if file.file?
-      # Use the original input format if the output format wasn't specified.
-
-      mime_type = shell_out!("file", "-b", "--mime-type", "--", file.to_s).stdout.chomp("\n")
-
-      case mime_type
-        when "application/octet-stream"
-          format = "binary"
-        when "application/xml"
-          format = "xml"
-        else
-          raise "Invalid MIME type #{mime_type.dump}"
-      end
-    else
-      format = "xml"
-    end
+  if file.file?
+    xml = shell_out!("plutil", "-convert", "xml1", "-o", "-", "--", file.to_s).stdout
+    original_file = file
+    original_xml = Nokogiri::XML::Document.parse(xml).to_xml(indent: 0)
   else
-    format = format.to_s
+    original_file = nil
+    original_xml = ""
   end
 
-  descriptions = ["#{action.to_s} plist #{file.to_s.dump}"]
-  descriptions.push(udiff(file, original_xml, file, xml).split("\n", -1))
+  op_keys_values = new_resource.op_keys_values
 
-  # Use `converge_by` to obtain some nice why-run output.
-  converge_by(descriptions) do
-    case format
-      when "binary"
-        # Use `plutil` to write out the plist in the binary format.
-        shell_out!("plutil", "-convert", "binary1", "-o", file.to_s, "--", "-", input: xml)
-      when "xml"
-        file.open("wb") { |f| f.write(xml) }
-      else
-        raise "Invalid plist output format #{format.dump}"
-    end
-  end
+  raise "Please set the resource's `content` attribute for plist creation" \
+    if op_keys_values.size != 1 || op_keys_values.first[0] != :content
+
+  value = op_keys_values.first[2]
+
+  doc = Nokogiri::XML::Document.new("1.0")
+  doc.encoding = "UTF-8"
+  doc.create_internal_subset("plist", "-//Apple//DTD PLIST 1.0//EN", "http://www.apple.com/DTDs/PropertyList-1.0.dtd")
+
+  root = Nokogiri::XML::Node.new("plist", doc)
+  root["version"] = "1.0"
+  doc.add_child(root)
+
+  root.add_child(to_node(value, doc, root, 0))
+
+  save(original_file, original_xml, file, doc.to_xml(indent: 0))
 end

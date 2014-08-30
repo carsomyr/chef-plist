@@ -77,7 +77,7 @@ module Plist
 
   module InstanceMethods
     def owner
-      @owner ||= node["plist"]["owner"] || ENV["SUDO_USER"] || Etc.getpwuid.name
+      @owner ||= new_resource.owner || node["plist"]["owner"] || ENV["SUDO_USER"] || Etc.getpwuid.name
     end
 
     # We are using Aaron Patterson's remedy here (see
