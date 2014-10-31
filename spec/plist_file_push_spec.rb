@@ -206,7 +206,7 @@ describe "plist-test::plist_file_push" do
   before(:all) do
     test_file.open("wb") { |f| f.write(content) }
 
-    ChefSpec::Runner.new(step_into: ["plist_file"]).converge(described_recipe)
+    ChefSpec::ServerRunner.new(step_into: ["plist_file"]).converge(described_recipe)
   end
 
   it "pushes the value onto a nested `array`" do

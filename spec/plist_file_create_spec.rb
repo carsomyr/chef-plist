@@ -42,7 +42,7 @@ test_file = Pathname.new(Dir.tmpdir) + "plist_file_create_spec.plist"
 
 describe "plist-test::plist_file_create" do
   before(:all) do
-    ChefSpec::Runner.new(step_into: ["plist_file"]).converge(described_recipe)
+    ChefSpec::ServerRunner.new(step_into: ["plist_file"]).converge(described_recipe)
   end
 
   it "creates a plist file" do

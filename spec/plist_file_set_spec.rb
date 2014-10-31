@@ -105,7 +105,7 @@ describe "plist-test::plist_file_set" do
   before(:all) do
     test_file.open("wb") { |f| f.write(content) }
 
-    ChefSpec::Runner.new(step_into: ["plist_file"]).converge(described_recipe)
+    ChefSpec::ServerRunner.new(step_into: ["plist_file"]).converge(described_recipe)
   end
 
   it "sets the value at a nested `dict` key" do
