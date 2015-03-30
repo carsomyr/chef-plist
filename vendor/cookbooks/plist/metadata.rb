@@ -22,7 +22,7 @@ maintainer_email "carsomyr@gmail.com"
 license "Apache-2.0"
 description "A cookbook containing recipes and resources for manipulating Apple property list files on Mac OS X"
 long_description Pathname.new("../README.md").expand_path(__FILE__).open { |f| f.read }
-version "0.9.0"
+version "0.9.1"
 
 supports "mac_os_x"
 supports "mac_os_x_server"
