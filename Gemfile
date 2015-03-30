@@ -18,6 +18,7 @@ source "https://rubygems.org"
 
 gem "chef"
 gem "chefspec"
+gem "foodcritic"
 gem "librarian-chef"
 gem "nokogiri"
 gem "rake"

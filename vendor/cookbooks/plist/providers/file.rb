@@ -69,7 +69,7 @@ def set_operation(doc, keys, value)
                to_node(Plist::Text.new(shim_end), doc, node, depth)] \
             + children[index, children.size]
 
-          node.children = Nokogiri::XML::NodeSet.new(doc, children)
+          node.children = Nokogiri::XML::NodeSet.new(doc, children) # ~FC047
         else
           shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
           shim_mid = "\n" + "\t" * depth
@@ -160,7 +160,7 @@ def save(original_file, original_xml, file, xml)
   group = new_resource.group
   mode = new_resource.mode
 
-  return \
+  return false \
     if original_xml == xml
 
   if !format
@@ -208,6 +208,8 @@ def save(original_file, original_xml, file, xml)
     FileUtils.chmod(mode, file) \
       if mode
   end
+
+  true
 end
 
 action :update do
@@ -242,7 +244,7 @@ action :update do
   # Run the user queries.
   doc.root.css(*new_resource.css_queries, self).each(&new_resource.css_query_callback)
 
-  save(file, original_doc.to_xml(indent: 0), file, doc.to_xml(indent: 0))
+  new_resource.updated_by_last_action(save(file, original_doc.to_xml(indent: 0), file, doc.to_xml(indent: 0)))
 end
 
 action :create do
@@ -275,5 +277,5 @@ action :create do
 
   root.add_child(to_node(value, doc, root, 0))
 
-  save(original_file, original_xml, file, doc.to_xml(indent: 0))
+  new_resource.updated_by_last_action(save(original_file, original_xml, file, doc.to_xml(indent: 0)))
 end

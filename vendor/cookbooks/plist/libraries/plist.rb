@@ -77,7 +77,7 @@ module Plist
 
   module InstanceMethods
     def owner
-      @owner ||= new_resource.owner || node["plist"]["owner"] || ENV["SUDO_USER"] || Etc.getpwuid.name
+      @owner ||= new_resource.owner || node["plist"]["owner"] || ENV["SUDO_USER"] || Etc.getpwuid.name # ~FC019
     end
 
     # We are using Aaron Patterson's remedy here (see
@@ -108,7 +108,7 @@ module Plist
       case data
         when Hash
           node = Nokogiri::XML::Node.new("dict", document)
-          node.parent = parent
+          node.parent = parent # ~FC047
 
           data.each_pair.sort do |lhs, rhs|
             lhs[0].to_s <=> rhs[0].to_s
@@ -123,7 +123,7 @@ module Plist
             if data.size > 0
         when Array
           node = Nokogiri::XML::Node.new("array", document)
-          node.parent = parent
+          node.parent = parent # ~FC047
 
           data.each do |value|
             node.add_child(to_node(Text(shim_start), document, node, depth + 1))
@@ -134,31 +134,31 @@ module Plist
             if data.size > 0
         when String
           node = Nokogiri::XML::Node.new("string", document)
-          node.parent = parent
-          node.content = data
+          node.parent = parent # ~FC047
+          node.content = data # ~FC047
         when TrueClass
           node = Nokogiri::XML::Node.new("true", document)
-          node.parent = parent
+          node.parent = parent # ~FC047
         when FalseClass
           node = Nokogiri::XML::Node.new("false", document)
-          node.parent = parent
+          node.parent = parent # ~FC047
         when Fixnum
           node = Nokogiri::XML::Node.new("integer", document)
-          node.parent = parent
-          node.content = data.to_s
+          node.parent = parent # ~FC047
+          node.content = data.to_s # ~FC047
         when Float
           node = Nokogiri::XML::Node.new("real", document)
-          node.parent = parent
+          node.parent = parent # ~FC047
 
           # Remove trailing zeroes if the float has an integral value: Apparently this is the representation used by
           # Apple for their `real` data type.
           data = data.to_i \
             if data == data.to_i && data != 0.0
 
-          node.content = data.to_s
+          node.content = data.to_s # ~FC047
         when Data
           node = Nokogiri::XML::Node.new("data", document)
-          node.parent = parent
+          node.parent = parent # ~FC047
 
           lines = data.content.scan(Regexp.new(".{1,#{76 - 8 * depth}}"))
 
@@ -166,15 +166,15 @@ module Plist
             if data.content.size > 0
         when Time
           node = Nokogiri::XML::Node.new("date", document)
-          node.parent = parent
-          node.content = data.iso8601
+          node.parent = parent # ~FC047
+          node.content = data.iso8601 # ~FC047
         when Key
           node = Nokogiri::XML::Node.new("key", document)
-          node.parent = parent
-          node.content = data.content
+          node.parent = parent # ~FC047
+          node.content = data.content # ~FC047
         when Text
           node = Nokogiri::XML::Text.new(data.content, document)
-          node.parent = parent
+          node.parent = parent # ~FC047
         else
           raise "There is no corresponding plist data type for the given Ruby object"
       end
