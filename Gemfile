@@ -16,7 +16,7 @@
 
 source "https://rubygems.org"
 
-gem "chef", "< 12"
+gem "chef"
 gem "chefspec"
 gem "librarian-chef"
 gem "nokogiri"
