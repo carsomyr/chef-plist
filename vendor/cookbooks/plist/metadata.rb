@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2014 Roy Liu
+# Copyright 2014-2016 Roy Liu
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -22,7 +22,7 @@ maintainer_email "carsomyr@gmail.com"
 license "Apache-2.0"
 description "A cookbook containing recipes and resources for manipulating Apple property list files on Mac OS X"
 long_description Pathname.new("../README.md").expand_path(__FILE__).open { |f| f.read }
-version "0.9.2"
+version "0.9.3"
 
 supports "mac_os_x"
 supports "mac_os_x_server"

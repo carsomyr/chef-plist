@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2014 Roy Liu
+# Copyright 2014-2016 Roy Liu
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -156,7 +156,6 @@ end
 
 def save(original_file, original_xml, file, xml)
   format = new_resource.format
-  owner = new_resource.owner
   group = new_resource.group
   mode = new_resource.mode
 
