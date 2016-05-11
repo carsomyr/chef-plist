@@ -266,7 +266,7 @@ module Plist
           prev_difference = curr_hunk.file_length_difference
 
           next \
-        if !prev_hunk || curr_hunk.merge(prev_hunk)
+            if !prev_hunk || curr_hunk.merge(prev_hunk)
 
           acc.concat("#{prev_hunk.diff(:unified)}\n")
         ensure

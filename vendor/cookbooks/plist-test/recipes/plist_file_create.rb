@@ -18,6 +18,6 @@ test_file = Pathname.new(Dir.tmpdir) + "#{recipe_name}_spec.plist"
 
 plist_file "#{recipe_name}_spec" do
   file test_file
-  content({c: {a: "a", b: "b", c: "c"}, b: "b", a: "a"})
+  content(c: {a: "a", b: "b", c: "c"}, b: "b", a: "a")
   action :nothing
 end.action(:create)

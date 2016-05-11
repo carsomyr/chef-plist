@@ -59,7 +59,7 @@ def content(value)
   @op_keys_values = [[:content, [], value]]
 end
 
-def initialize(domain, run_context)
+def initialize(domain, run_context = nil)
   super
 
   @css_queries = []

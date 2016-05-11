@@ -25,7 +25,9 @@ plist_file "#{recipe_name}_spec" do
   set "outer1", "inner1", "key0",
       Plist::Data.new("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz")
   set "outer1", "inner1", "key2",
-      Plist::Data.new("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5emFiY2RlZmdo" \
-                      "aWprbG1ub3BxcnN0dXZ3eHl6", false)
+      Plist::Data.new(
+          "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5emFiY2RlZmdo" \
+          "aWprbG1ub3BxcnN0dXZ3eHl6", false
+      )
   action :nothing
 end.action(:update)
