@@ -14,7 +14,6 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-require "chef/shell_out"
 require "diff/lcs"
 require "diff/lcs/hunk"
 require "etc"
