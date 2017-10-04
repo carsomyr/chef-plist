@@ -103,13 +103,13 @@ test_file = Pathname.new(Dir.tmpdir) + "plist_file_set_spec.plist"
 
 describe "plist-test::plist_file_set" do
   before(:all) do
-    test_file.open("wb") { |f| f.write(content) }
+    test_file.open("wb") {|f| f.write(content)}
 
     ChefSpec::ServerRunner.new(step_into: ["plist_file"]).converge(described_recipe)
   end
 
   it "sets the value at a nested `dict` key" do
-    expect(test_file.open("rb") { |f| f.read }).to eq(updated_content)
+    expect(test_file.open("rb") {|f| f.read}).to eq(updated_content)
   end
 
   after(:all) do

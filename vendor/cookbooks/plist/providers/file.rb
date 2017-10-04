@@ -170,7 +170,7 @@ def save(original_file, original_xml, file, xml)
       case mime_type
         when "application/octet-stream"
           format = "binary"
-        when "application/xml"
+        when "text/xml"
           format = "xml"
         else
           raise "Invalid MIME type #{mime_type.dump}"
@@ -238,9 +238,6 @@ action :update do
         raise "Invalid operation #{operation.to_s.dump}"
     end
   end
-
-  # Run the user queries.
-  doc.root.css(*new_resource.css_queries, self).each(&new_resource.css_query_callback)
 
   new_resource.updated_by_last_action(save(file, original_doc.to_xml(indent: 0), file, doc.to_xml(indent: 0)))
 end

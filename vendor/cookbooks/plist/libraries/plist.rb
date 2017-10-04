@@ -88,7 +88,7 @@ module Plist
 
     def content_equals(node_set, *escaped_text_fragments)
       text = escaped_text_fragments.join("")
-      node_set.find_all { |node| node.text == text }
+      node_set.find_all {|node| node.text == text}
     end
 
     def to_node(data, document, parent, depth = nil)
@@ -142,7 +142,7 @@ module Plist
         when FalseClass
           node = Nokogiri::XML::Node.new("false", document)
           node.parent = parent # ~FC047
-        when Fixnum
+        when Integer
           node = Nokogiri::XML::Node.new("integer", document)
           node.parent = parent # ~FC047
           node.content = data.to_s # ~FC047
@@ -186,9 +186,9 @@ module Plist
       case node.name
         when "dict"
           elements = node.elements
-          Hash[(0...elements.size).step(2).map { |i| [elements[i].text, to_ruby(elements[i + 1], depth + 1)] }]
+          Hash[(0...elements.size).step(2).map {|i| [elements[i].text, to_ruby(elements[i + 1], depth + 1)]}]
         when "array"
-          node.elements.map { |element| to_ruby(element, depth + 1) }
+          node.elements.map {|element| to_ruby(element, depth + 1)}
         when "string"
           node.text
         when "true"
@@ -216,14 +216,14 @@ module Plist
       case lhs
         when Array
           return false \
-            if lhs.size != rhs.size || (0...lhs.size).find { |i| !deep_equals?(lhs[i], rhs[i]) }
+            if lhs.size != rhs.size || (0...lhs.size).find {|i| !deep_equals?(lhs[i], rhs[i])}
         when Hash
           lhs_keys = lhs.keys
           rhs_keys = rhs.keys
 
           return false \
-            if lhs_keys.sort != rhs_keys.sort || lhs_keys.find { |key| !deep_equals?(lhs[key], rhs[key]) }
-        when String, TrueClass, FalseClass, Fixnum, Float, Plist::Data, Time
+            if lhs_keys.sort != rhs_keys.sort || lhs_keys.find {|key| !deep_equals?(lhs[key], rhs[key])}
+        when String, TrueClass, FalseClass, Integer, Float, Plist::Data, Time
           return false \
             if lhs != rhs
         else
