@@ -31,62 +31,56 @@ def set_operation(doc, keys, value)
 
   if keys.size > 0
     last_key = keys.pop
-    css_query = "> dict" + keys.map { |key| " > key:content_equals(#{escape_css(key)}) + dict" }.join("")
+    css_query = "> dict" + keys.map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("")
 
-    root.css(css_query, self).each do |node|
-      old_nodes = node.css("> key:content_equals(#{escape_css(last_key)})", self)
+    root.css(css_query, self).each do |dict_node|
+      old_nodes = dict_node.css("> key:content_equals(#{escape_css(last_key)})", self)
 
       if old_nodes.size > 0
         # A value already exists for the key; replace it.
-        new_node = to_node(value, doc, node)
-        old_nodes.each { |old_node| old_node.next_element.replace(new_node) }
+        new_node = to_node(value, doc, dict_node)
+        old_nodes.each {|old_node| old_node.next_element.replace(new_node)}
       else
-        parent = node
-        depth = 0
-
-        while parent != root
-          parent = parent.parent
-          depth += 1
-        end
+        depth = depth(dict_node)
 
         # Find a suitable insertion location so that keys remain lexicographically ordered.
-        insertion_node = node.css("> key").to_a.bsearch { |node| node.text > last_key }
+        insertion_node = dict_node.css("> key").to_a.bsearch {|node| node.text > last_key}
 
         if insertion_node
           shim_start = "\n" + "\t" * depth
           shim_end = shim_start
 
-          children = node.children.to_a
+          children = dict_node.children.to_a
           index = children.index(insertion_node)
 
           # Prepend newly created children to the node representing the insertion location. Note that we are rebuilding
           # the `NodeSet` of children because Nokogiri incorrectly reparents existing `Text` nodes with `Node#before`.
           children = children[0, index] \
-            + [to_node(Plist::Key.new(last_key), doc, node, depth),
-               to_node(Plist::Text.new(shim_start), doc, node, depth),
-               to_node(value, doc, node, depth),
-               to_node(Plist::Text.new(shim_end), doc, node, depth)] \
+            + [to_node(Plist::Key.new(last_key), doc, dict_node),
+               to_node(Plist::Text.new(shim_start), doc, dict_node),
+               to_node(value, doc, dict_node),
+               to_node(Plist::Text.new(shim_end), doc, dict_node)] \
             + children[index, children.size]
 
-          node.children = Nokogiri::XML::NodeSet.new(doc, children) # ~FC047
+          dict_node.children = Nokogiri::XML::NodeSet.new(doc, children) # ~FC047
         else
-          shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
+          shim_start = dict_node.children.size > 0 ? "\t" : "\n" + "\t" * depth
           shim_mid = "\n" + "\t" * depth
           shim_end = "\n" + "\t" * (depth - 1)
 
           # Append newly created children to the end.
-          node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
-          node.add_child(to_node(Plist::Key.new(last_key), doc, node, depth))
-          node.add_child(to_node(Plist::Text.new(shim_mid), doc, node, depth))
-          node.add_child(to_node(value, doc, node, depth))
-          node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
+          dict_node.add_child(to_node(Plist::Text.new(shim_start), doc, dict_node))
+          dict_node.add_child(to_node(Plist::Key.new(last_key), doc, dict_node))
+          dict_node.add_child(to_node(Plist::Text.new(shim_mid), doc, dict_node))
+          dict_node.add_child(to_node(value, doc, dict_node))
+          dict_node.add_child(to_node(Plist::Text.new(shim_end), doc, dict_node))
         end
       end
     end
   else
     # The user intends to replace the root `dict`.
-    root.css("> dict").each do |node|
-      node.replace(to_node(value, doc, root, 0))
+    root.css("> dict").each do |dict_node|
+      dict_node.replace(to_node(value, doc, root))
     end
   end
 end
@@ -96,32 +90,29 @@ def push_operation(doc, keys, value)
 
   last_key = keys.pop
   css_query = "> dict" \
-    + keys.map { |key| " > key:content_equals(#{escape_css(key)}) + dict" }.join("") \
+    + keys.map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("") \
     + " > key:content_equals(#{escape_css(last_key)}) + array"
 
-  root.css(css_query, self).each do |node|
-    parent = node
-    depth = 0
+  root.css(css_query, self).each do |array_node|
+    depth = depth(array_node)
 
-    while parent != root
-      parent = parent.parent
-      depth += 1
-    end
+    value_node = to_node(value, doc, array_node)
+    value = to_ruby(value_node)
 
-    value_node = to_node(value, doc, node, depth).remove
-    value = to_ruby(value_node, depth)
+    # Remove the node so that `to_ruby` doesn't pick it up when called on its parent.
+    value_node.remove
 
     # Do nothing if the array already contains the value.
     next \
-      if to_ruby(node, depth - 1).find { |xml_value| deep_equals?(xml_value, value) }
+      if to_ruby(array_node).find {|xml_value| deep_equals?(xml_value, value)}
 
-    shim_start = node.children.size > 0 ? "\t" : "\n" + "\t" * depth
+    shim_start = array_node.children.size > 0 ? "\t" : "\n" + "\t" * depth
     shim_end = "\n" + "\t" * (depth - 1)
 
     # Append newly created children to the end.
-    node.add_child(to_node(Plist::Text.new(shim_start), doc, node, depth))
-    node.add_child(value_node)
-    node.add_child(to_node(Plist::Text.new(shim_end), doc, node, depth))
+    array_node.add_child(to_node(Plist::Text.new(shim_start), doc, array_node))
+    array_node.add_child(value_node)
+    array_node.add_child(to_node(Plist::Text.new(shim_end), doc, array_node))
   end
 end
 
@@ -192,7 +183,7 @@ def save(original_file, original_xml, file, xml)
         # Use `plutil` to write out the plist in the binary format.
         shell_out!("plutil", "-convert", "binary1", "-o", file.to_s, "--", "-", input: xml)
       when "xml"
-        file.open("wb") { |f| f.write(xml) }
+        file.open("wb") {|f| f.write(xml)}
       else
         raise "Invalid plist output format #{format.dump}"
     end
@@ -227,7 +218,7 @@ action :update do
   doc = original_doc.dup
 
   new_resource.op_keys_values.each do |operation, keys, value|
-    keys = keys.map { |key| key.to_s }
+    keys = keys.map {|key| key.to_s}
 
     case operation
       when :set
@@ -270,7 +261,7 @@ action :create do
   root["version"] = "1.0"
   doc.add_child(root)
 
-  root.add_child(to_node(value, doc, root, 0))
+  root.add_child(to_node(value, doc, root))
 
   new_resource.updated_by_last_action(save(original_file, original_xml, file, doc.to_xml(indent: 0)))
 end

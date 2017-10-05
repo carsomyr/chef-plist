@@ -91,19 +91,23 @@ module Plist
       node_set.find_all {|node| node.text == text}
     end
 
-    def to_node(data, document, parent, depth = nil)
-      if !depth
-        node = parent
-        depth = 0
+    def depth(node)
+      parent = node
+      depth = -1
 
-        while node != document.root
-          node = node.parent
-          depth += 1
-        end
+      while parent && !parent.xml?
+        parent = parent.parent
+        depth += 1
       end
 
-      shim_start = "\n" + "\t" * (depth + 1)
-      shim_end = "\n" + "\t" * depth
+      depth
+    end
+
+    def to_node(data, document, parent)
+      depth = depth(parent) + 1
+
+      shim_start = "\n" + "\t" * depth
+      shim_end = "\n" + "\t" * (depth - 1)
 
       case data
         when Hash
@@ -113,24 +117,24 @@ module Plist
           data.each_pair.sort do |lhs, rhs|
             lhs[0].to_s <=> rhs[0].to_s
           end.map do |key, value|
-            node.add_child(to_node(Text(shim_start), document, node, depth + 1))
-            node.add_child(to_node(Key(key), document, node, depth + 1))
-            node.add_child(to_node(Text(shim_start), document, node, depth + 1))
-            node.add_child(to_node(value, document, node, depth + 1))
+            node.add_child(to_node(Text(shim_start), document, node))
+            node.add_child(to_node(Key(key), document, node))
+            node.add_child(to_node(Text(shim_start), document, node))
+            node.add_child(to_node(value, document, node))
           end
 
-          node.add_child(to_node(Text(shim_end), document, node, depth + 1)) \
+          node.add_child(to_node(Text(shim_end), document, node)) \
             if data.size > 0
         when Array
           node = Nokogiri::XML::Node.new("array", document)
           node.parent = parent # ~FC047
 
           data.each do |value|
-            node.add_child(to_node(Text(shim_start), document, node, depth + 1))
-            node.add_child(to_node(value, document, node, depth + 1))
+            node.add_child(to_node(Text(shim_start), document, node))
+            node.add_child(to_node(value, document, node))
           end
 
-          node.add_child(to_node(Text(shim_end), document, node, depth + 1)) \
+          node.add_child(to_node(Text(shim_end), document, node)) \
             if data.size > 0
         when String
           node = Nokogiri::XML::Node.new("string", document)
@@ -160,9 +164,9 @@ module Plist
           node = Nokogiri::XML::Node.new("data", document)
           node.parent = parent # ~FC047
 
-          lines = data.content.scan(Regexp.new(".{1,#{76 - 8 * depth}}"))
+          lines = data.content.scan(Regexp.new(".{1,#{76 - 8 * (depth - 1)}}"))
 
-          node.add_child(to_node(Text(([""] + lines + [""]).join(shim_end)), document, node, depth + 1)) \
+          node.add_child(to_node(Text(([""] + lines + [""]).join(shim_end)), document, node)) \
             if data.content.size > 0
         when Time
           node = Nokogiri::XML::Node.new("date", document)
@@ -182,7 +186,7 @@ module Plist
       node
     end
 
-    def to_ruby(node, depth)
+    def to_ruby(node, depth = depth(node))
       case node.name
         when "dict"
           elements = node.elements
@@ -201,7 +205,7 @@ module Plist
           node.text.to_f
         when "data"
           # Strip out pretty-printed whitespace.
-          Data.new(node.text.gsub("\n" + "\t" * depth, ""), false)
+          Data.new(node.text.gsub("\n" + "\t" * (depth - 1), ""), false)
         when "date"
           Time.iso8601(node.text)
         else
