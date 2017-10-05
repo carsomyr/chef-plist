@@ -26,14 +26,21 @@ def whyrun_supported?
   true
 end
 
-def set_operation(doc, keys, value)
+def css_set(doc, css_query, last_key_or_value, value = nil)
+  if !value.nil?
+    last_key = last_key_or_value
+  else
+    last_key = nil
+    value = last_key_or_value
+  end
+
   root = doc.root
 
-  if keys.size > 0
-    last_key = keys.pop
-    css_query = "> dict" + keys.map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("")
-
+  if last_key
     root.css(css_query, self).each do |dict_node|
+      raise "Node name must be `dict`" \
+        if dict_node.name != "dict"
+
       old_nodes = dict_node.css("> key:content_equals(#{escape_css(last_key)})", self)
 
       if old_nodes.size > 0
@@ -78,6 +85,25 @@ def set_operation(doc, keys, value)
       end
     end
   else
+    root.css(css_query, self).each do |key_node|
+      raise "Node name must be `key`" \
+        if key_node.name != "key"
+
+      new_node = to_node(value, doc, key_node.parent)
+      key_node.next_element.replace(new_node)
+    end
+  end
+end
+
+def set(doc, keys, value)
+  root = doc.root
+
+  if keys.size > 0
+    last_key = keys.pop
+    css_query = "> dict" + keys.map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("")
+
+    css_set(doc, css_query, last_key, value)
+  else
     # The user intends to replace the root `dict`.
     root.css("> dict").each do |dict_node|
       dict_node.replace(to_node(value, doc, root))
@@ -85,15 +111,13 @@ def set_operation(doc, keys, value)
   end
 end
 
-def push_operation(doc, keys, value)
+def css_push(doc, css_query, value)
   root = doc.root
 
-  last_key = keys.pop
-  css_query = "> dict" \
-    + keys.map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("") \
-    + " > key:content_equals(#{escape_css(last_key)}) + array"
-
   root.css(css_query, self).each do |array_node|
+    raise "Node name must be `array`" \
+      if array_node.name != "array"
+
     depth = depth(array_node)
 
     value_node = to_node(value, doc, array_node)
@@ -114,6 +138,14 @@ def push_operation(doc, keys, value)
     array_node.add_child(value_node)
     array_node.add_child(to_node(Plist::Text.new(shim_end), doc, array_node))
   end
+end
+
+def push(doc, keys, value)
+  css_query = "> dict" \
+    + keys.map {|key| " > key:content_equals(#{escape_css(key)})"}.join(" + dict") \
+    + " + array"
+
+  css_push(doc, css_query, value)
 end
 
 def file
@@ -222,9 +254,9 @@ action :update do
 
     case operation
       when :set
-        set_operation(doc, keys, value)
+        set(doc, keys, value)
       when :push
-        push_operation(doc, keys, value)
+        push(doc, keys, value)
       else
         raise "Invalid operation #{operation.to_s.dump}"
     end
