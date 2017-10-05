@@ -42,13 +42,6 @@ def push(*keys, value)
   @op_keys_values.push([:push, keys, value])
 end
 
-def content(value)
-  raise "Setting the plist root `dict` requires an instance of `Hash`" \
-    if !value.is_a?(Hash)
-
-  @op_keys_values = [[:content, [], value]]
-end
-
 def initialize(domain, run_context = nil)
   super
 

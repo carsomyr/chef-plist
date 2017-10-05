@@ -278,13 +278,6 @@ action :create do
     original_xml = ""
   end
 
-  op_keys_values = new_resource.op_keys_values
-
-  raise "Please set the resource's `content` attribute for plist creation" \
-    if op_keys_values.size != 1 || op_keys_values.first[0] != :content
-
-  value = op_keys_values.first[2]
-
   doc = Nokogiri::XML::Document.new("1.0")
   doc.encoding = "UTF-8"
   doc.create_internal_subset("plist", "-//Apple//DTD PLIST 1.0//EN", "http://www.apple.com/DTDs/PropertyList-1.0.dtd")
@@ -293,7 +286,21 @@ action :create do
   root["version"] = "1.0"
   doc.add_child(root)
 
-  root.add_child(to_node(value, doc, root))
+  # Start with an empty `dict` as the root's sole child.
+  root.add_child(to_node({}, doc, root))
+
+  new_resource.op_keys_values.each do |operation, keys, value|
+    keys = keys.map {|key| key.to_s}
+
+    case operation
+      when :set
+        set(doc, keys, value)
+      when :push
+        push(doc, keys, value)
+      else
+        raise "Invalid operation #{operation.to_s.dump}"
+    end
+  end
 
   new_resource.updated_by_last_action(save(original_file, original_xml, file, doc.to_xml(indent: 0)))
 end
