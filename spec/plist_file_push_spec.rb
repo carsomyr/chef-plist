@@ -196,6 +196,31 @@ updated_content = <<EOS
 			<date>2016-01-01T00:00:00Z</date>
 		</array>
 	</dict>
+	<key>outer7</key>
+	<dict>
+		<key>inner7</key>
+		<dict>
+			<key>a</key>
+			<array>
+				<integer>1</integer>
+				<integer>2</integer>
+			</array>
+		</dict>
+		<key>inner8</key>
+		<dict>
+			<key>b</key>
+			<array>
+				<integer>1</integer>
+			</array>
+		</dict>
+		<key>inner9</key>
+		<dict>
+			<key>c</key>
+			<array>
+				<integer>1</integer>
+			</array>
+		</dict>
+	</dict>
 </dict>
 </plist>
 EOS

@@ -29,5 +29,17 @@ plist_file "#{recipe_name}_spec" do
           "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5emFiY2RlZmdo" \
           "aWprbG1ub3BxcnN0dXZ3eHl6", false
       )
+
+  options intermediate: true do
+    set "outer7", "inner7", "a", 1
+  end
+
+  set "outer7", "inner7", "b", 2
+
+  options intermediate: true do
+    set "outer7", "inner9", "a", 1
+    push "outer7", "inner8", "a", 1
+  end
+
   action :nothing
 end.action(:update)

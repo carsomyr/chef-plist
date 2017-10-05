@@ -36,5 +36,17 @@ plist_file "#{recipe_name}_spec" do
        Plist::Data.new("zyxwvutsrqponmlkjihgfedcbazyxwvutsrqponmlkjihgfedcbazyxwvutsrqponmlkjihgfedcba")
   push "outer6", "inner6", Time.iso8601("2016-01-01T00:00:00Z")
   push "outer6", "inner6", Time.iso8601("2015-01-01T00:00:00Z")
+
+  options intermediate: true do
+    push "outer7", "inner7", "a", 1
+  end
+
+  push "outer7", "inner7", "a", 2
+
+  options intermediate: true do
+    push "outer7", "inner9", "c", 1
+    push "outer7", "inner8", "b", 1
+  end
+
   action :nothing
 end.action(:update)

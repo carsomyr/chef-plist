@@ -32,18 +32,38 @@ def set(*keys, value)
   raise "Setting the plist root `dict` requires an instance of `Hash`" \
     if keys.size == 0 && !value.is_a?(Hash)
 
-  @op_keys_values.push([:set, keys, value])
+  @op_keys_values.push([:set, keys, value, @options || {}])
 end
 
 def push(*keys, value)
   raise "Please provide at least one `dict` key" \
     if keys.size == 0
 
-  @op_keys_values.push([:push, keys, value])
+  @op_keys_values.push([:push, keys, value, @options || {}])
+end
+
+def options(options, &block)
+  raise "Nested `option` calls are not allowed" \
+    if @options
+
+  raise "Please provide some options" \
+    if !options.is_a?(Hash)
+
+  raise "Please provide a block" \
+    if !block
+
+  begin
+    @options = options.dup
+
+    block.call
+  ensure
+    @options = nil
+  end
 end
 
 def initialize(domain, run_context = nil)
   super
 
   @op_keys_values = []
+  @options = nil
 end

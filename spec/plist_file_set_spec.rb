@@ -95,6 +95,28 @@ updated_content = <<EOS
 			</data>
 		</dict>
 	</dict>
+	<key>outer7</key>
+	<dict>
+		<key>inner7</key>
+		<dict>
+			<key>a</key>
+			<integer>1</integer>
+			<key>b</key>
+			<integer>2</integer>
+		</dict>
+		<key>inner8</key>
+		<dict>
+			<key>a</key>
+			<array>
+				<integer>1</integer>
+			</array>
+		</dict>
+		<key>inner9</key>
+		<dict>
+			<key>a</key>
+			<integer>1</integer>
+		</dict>
+	</dict>
 </dict>
 </plist>
 EOS

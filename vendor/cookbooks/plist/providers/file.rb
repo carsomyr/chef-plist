@@ -26,7 +26,9 @@ def whyrun_supported?
   true
 end
 
-def css_set(doc, css_query, last_key_or_value, value = nil)
+def css_set(node, css_query, last_key_or_value, value = nil)
+  doc = node.document
+
   if !value.nil?
     last_key = last_key_or_value
   else
@@ -34,10 +36,8 @@ def css_set(doc, css_query, last_key_or_value, value = nil)
     value = last_key_or_value
   end
 
-  root = doc.root
-
   if last_key
-    root.css(css_query, self).each do |dict_node|
+    ((css_query && node.css(css_query, self)) || [node]).each do |dict_node|
       raise "Node name must be `dict`" \
         if dict_node.name != "dict"
 
@@ -85,7 +85,7 @@ def css_set(doc, css_query, last_key_or_value, value = nil)
       end
     end
   else
-    root.css(css_query, self).each do |key_node|
+    ((css_query && node.css(css_query, self)) || [node]).each do |key_node|
       raise "Node name must be `key`" \
         if key_node.name != "key"
 
@@ -95,14 +95,18 @@ def css_set(doc, css_query, last_key_or_value, value = nil)
   end
 end
 
-def set(doc, keys, value)
+def set(doc, keys, value, options = {})
   root = doc.root
 
-  if keys.size > 0
-    last_key = keys.pop
-    css_query = "> dict" + keys.map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("")
+  if options[:intermediate]
+    create_intermediate_dicts(doc, keys[0...-1])
+  end
 
-    css_set(doc, css_query, last_key, value)
+  if keys.size > 0
+    last_key = keys.last
+    css_query = "> dict" + keys[0...-1].map {|key| " > key:content_equals(#{escape_css(key)}) + dict"}.join("")
+
+    css_set(root, css_query, last_key, value)
   else
     # The user intends to replace the root `dict`.
     root.css("> dict").each do |dict_node|
@@ -111,10 +115,10 @@ def set(doc, keys, value)
   end
 end
 
-def css_push(doc, css_query, value)
-  root = doc.root
+def css_push(node, css_query, value)
+  doc = node.document
 
-  root.css(css_query, self).each do |array_node|
+  ((css_query && node.css(css_query, self)) || [node]).each do |array_node|
     raise "Node name must be `array`" \
       if array_node.name != "array"
 
@@ -140,12 +144,42 @@ def css_push(doc, css_query, value)
   end
 end
 
-def push(doc, keys, value)
+def push(doc, keys, value, options = {})
+  root = doc.root
+
+  if options[:intermediate]
+    dict_node = create_intermediate_dicts(doc, keys[0...-1])
+    last_key = keys.last
+
+    css_set(dict_node, nil, last_key, []) \
+      if !dict_node.css("> key:content_equals(#{escape_css(last_key)}) + array", self).first
+  end
+
   css_query = "> dict" \
     + keys.map {|key| " > key:content_equals(#{escape_css(key)})"}.join(" + dict") \
     + " + array"
 
-  css_push(doc, css_query, value)
+  css_push(root, css_query, value)
+end
+
+def create_intermediate_dicts(doc, keys)
+  root = doc.root
+  root_dict_node = root.css("> dict").first
+
+  return \
+    if !root_dict_node || keys.size <= 1
+
+  keys.reduce(root_dict_node) do |dict_node, key|
+    css_query = "> key:content_equals(#{escape_css(key)}) + dict"
+    child_dict_node = dict_node.css(css_query, self).first
+
+    if !child_dict_node
+      css_set(dict_node, nil, key, {})
+      child_dict_node = dict_node.css(css_query, self).first
+    end
+
+    child_dict_node
+  end
 end
 
 def file
@@ -249,14 +283,14 @@ action :update do
   original_doc = Nokogiri::XML::Document.parse(xml)
   doc = original_doc.dup
 
-  new_resource.op_keys_values.each do |operation, keys, value|
+  new_resource.op_keys_values.each do |operation, keys, value, options|
     keys = keys.map {|key| key.to_s}
 
     case operation
       when :set
-        set(doc, keys, value)
+        set(doc, keys, value, options)
       when :push
-        push(doc, keys, value)
+        push(doc, keys, value, options)
       else
         raise "Invalid operation #{operation.to_s.dump}"
     end
@@ -289,14 +323,14 @@ action :create do
   # Start with an empty `dict` as the root's sole child.
   root.add_child(to_node({}, doc, root))
 
-  new_resource.op_keys_values.each do |operation, keys, value|
+  new_resource.op_keys_values.each do |operation, keys, value, options|
     keys = keys.map {|key| key.to_s}
 
     case operation
       when :set
-        set(doc, keys, value)
+        set(doc, keys, value, options)
       when :push
-        push(doc, keys, value)
+        push(doc, keys, value, options)
       else
         raise "Invalid operation #{operation.to_s.dump}"
     end
