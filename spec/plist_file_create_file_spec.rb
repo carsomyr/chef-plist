@@ -38,15 +38,15 @@ content = <<EOS
 </plist>
 EOS
 
-test_file = Pathname.new(Dir.tmpdir) + "plist_file_create_spec.plist"
+test_file = Pathname.new(Dir.tmpdir) + "plist_file_create_file_spec.plist"
 
-describe "plist-test::plist_file_create" do
+describe "plist-test::plist_file_create_file" do
   before(:all) do
     ChefSpec::ServerRunner.new(step_into: ["plist_file"]).converge(described_recipe)
   end
 
   it "creates a plist file" do
-    expect(test_file.open("rb") { |f| f.read }).to eq(content)
+    expect(test_file.open("rb") {|f| f.read}).to eq(content)
   end
 
   after(:all) do

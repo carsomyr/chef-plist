@@ -267,61 +267,31 @@ def save(original_file, original_xml, file, xml)
   true
 end
 
-action :update do
-  require "nokogiri" \
-    if !defined?(Nokogiri)
-
-  if !file.file?
-    Chef::Log.info("no action taken for #{new_resource} because plist file #{file.to_s.dump} doesn't exist")
-
-    next
-  end
-
-  # Use `plutil` to read plists that are potentially in the binary format.
-  xml = shell_out!("plutil", "-convert", "xml1", "-o", "-", "--", file.to_s).stdout
-
-  original_doc = Nokogiri::XML::Document.parse(xml)
-  doc = original_doc.dup
-
-  new_resource.op_keys_values.each do |operation, keys, value, options|
-    keys = keys.map {|key| key.to_s}
-
-    case operation
-      when :set
-        set(doc, keys, value, options)
-      when :push
-        push(doc, keys, value, options)
-      else
-        raise "Invalid operation #{operation.to_s.dump}"
-    end
-  end
-
-  new_resource.updated_by_last_action(save(file, original_doc.to_xml(indent: 0), file, doc.to_xml(indent: 0)))
-end
-
 action :create do
   require "nokogiri" \
     if !defined?(Nokogiri)
 
   if file.file?
     xml = shell_out!("plutil", "-convert", "xml1", "-o", "-", "--", file.to_s).stdout
+    doc = Nokogiri::XML::Document.parse(xml).dup
+
     original_file = file
-    original_xml = Nokogiri::XML::Document.parse(xml).to_xml(indent: 0)
+    original_xml = doc.to_xml(indent: 0)
   else
+    doc = Nokogiri::XML::Document.new("1.0")
+    doc.encoding = "UTF-8"
+    doc.create_internal_subset("plist", "-//Apple//DTD PLIST 1.0//EN", "http://www.apple.com/DTDs/PropertyList-1.0.dtd")
+
+    root = Nokogiri::XML::Node.new("plist", doc)
+    root["version"] = "1.0"
+    doc.add_child(root)
+
+    # Start with an empty `dict` as the root's sole child.
+    root.add_child(to_node({}, doc, root))
+
     original_file = nil
     original_xml = ""
   end
-
-  doc = Nokogiri::XML::Document.new("1.0")
-  doc.encoding = "UTF-8"
-  doc.create_internal_subset("plist", "-//Apple//DTD PLIST 1.0//EN", "http://www.apple.com/DTDs/PropertyList-1.0.dtd")
-
-  root = Nokogiri::XML::Node.new("plist", doc)
-  root["version"] = "1.0"
-  doc.add_child(root)
-
-  # Start with an empty `dict` as the root's sole child.
-  root.add_child(to_node({}, doc, root))
 
   new_resource.op_keys_values.each do |operation, keys, value, options|
     keys = keys.map {|key| key.to_s}

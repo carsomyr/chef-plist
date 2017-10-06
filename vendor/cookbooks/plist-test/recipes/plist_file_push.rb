@@ -20,6 +20,7 @@ test_file = Pathname.new(Dir.tmpdir) + "#{recipe_name}_spec.plist"
 
 plist_file "#{recipe_name}_spec" do
   file test_file
+
   push "outer0", "inner0", {1 => 1}
   push "outer0", "inner0", {b: {0 => 0.0}, a: "a"}
   push "outer1", "inner1", [2, 3]
@@ -48,5 +49,5 @@ plist_file "#{recipe_name}_spec" do
     push "outer7", "inner8", "b", 1
   end
 
-  action :nothing
-end.action(:update)
+  action :create
+end
